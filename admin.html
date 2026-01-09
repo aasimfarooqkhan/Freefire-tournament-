@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Panel</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h2>Admin Login</h2>
+
+<div id="loginBox">
+  <input type="password" id="adminPass" placeholder="Admin Password">
+  <button onclick="login()">Login</button>
+</div>
+
+<div id="adminPanel" style="display:none;">
+  <h3>Create Match</h3>
+
+  <input id="teamA" placeholder="Team A">
+  <input id="teamB" placeholder="Team B">
+  <input id="date" placeholder="Match Date">
+  <input id="time" placeholder="Match Time">
+  <input id="room" placeholder="Room ID">
+  <input id="pass" placeholder="Room Password">
+
+  <button onclick="createMatch()">Create Match</button>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
