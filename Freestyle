@@ -1,0 +1,165 @@
+const express = require("express");
+const mongoose = require("mongoose");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+
+const app = express();
+app.use(cors());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+
+/* =======================
+   DATABASE CONNECTION
+======================= */
+mongoose.connect("mongodb://127.0.0.1:27017/freefire", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => console.log("MongoDB Connected"))
+  .catch(err => console.log(err));
+
+/* =======================
+   SCHEMAS
+======================= */
+const TeamSchema = new mongoose.Schema({
+  teamName: { type: String, unique: true },
+  captainName: String,
+  captainContact: String,
+  players: [
+    {
+      playerName: String,
+      uid: String,
+      level: Number
+    }
+  ],
+  createdAt: { type: Date, default: Date.now }
+});
+
+const MatchSchema = new mongoose.Schema({
+  teamA: String,
+  teamB: String,
+  matchDate: String,
+  matchTime: String,
+  roomId: String,
+  roomPassword: String
+});
+
+const Team = mongoose.model("Team", TeamSchema);
+const Match = mongoose.model("Match", MatchSchema);
+
+/* =======================
+   FRONTEND PAGES
+======================= */
+app.get("/", (req, res) => {
+  res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+<title>Free Fire Tournament</title>
+<style>
+body{background:#0f172a;color:#fff;font-family:Arial;padding:20px}
+input,button{margin:5px;padding:8px;width:100%}
+.card{max-width:500px;margin:auto;background:#020617;padding:20px;border-radius:10px}
+button{background:#22c55e;border:none;font-weight:bold}
+</style>
+</head>
+<body>
+<div class="card">
+<h2>Free Fire Tournament Registration</h2>
+<form method="POST" action="/register">
+<input name="teamName" placeholder="Team Name" required />
+<input name="captainName" placeholder="Captain Name" required />
+<input name="captainContact" placeholder="Captain Contact" required />
+
+<h4>Players</h4>
+<input name="p1name" placeholder="Player 1 Name" required />
+<input name="p1uid" placeholder="Player 1 UID" required />
+<input name="p1level" placeholder="Player 1 Level" required />
+
+<input name="p2name" placeholder="Player 2 Name" required />
+<input name="p2uid" placeholder="Player 2 UID" required />
+<input name="p2level" placeholder="Player 2 Level" required />
+
+<input name="p3name" placeholder="Player 3 Name" required />
+<input name="p3uid" placeholder="Player 3 UID" required />
+<input name="p3level" placeholder="Player 3 Level" required />
+
+<input name="p4name" placeholder="Player 4 Name" required />
+<input name="p4uid" placeholder="Player 4 UID" required />
+<input name="p4level" placeholder="Player 4 Level" required />
+
+<button type="submit">Register Team</button>
+</form>
+
+<hr>
+<h3>Check Match</h3>
+<form method="GET" action="/match">
+<input name="teamName" placeholder="Enter Team Name" required />
+<button type="submit">Check Match</button>
+</form>
+</div>
+</body>
+</html>
+`);
+});
+
+/* =======================
+   TEAM REGISTRATION
+======================= */
+app.post("/register", async (req, res) => {
+  try {
+    const team = new Team({
+      teamName: req.body.teamName,
+      captainName: req.body.captainName,
+      captainContact: req.body.captainContact,
+      players: [
+        { playerName: req.body.p1name, uid: req.body.p1uid, level: req.body.p1level },
+        { playerName: req.body.p2name, uid: req.body.p2uid, level: req.body.p2level },
+        { playerName: req.body.p3name, uid: req.body.p3uid, level: req.body.p3level },
+        { playerName: req.body.p4name, uid: req.body.p4uid, level: req.body.p4level }
+      ]
+    });
+
+    await team.save();
+    res.send("<h2>Team Registered Successfully</h2><a href='/'>Go Back</a>");
+  } catch (err) {
+    res.send("<h2>Team already registered or error occurred</h2><a href='/'>Go Back</a>");
+  }
+});
+
+/* =======================
+   MATCH LOOKUP
+======================= */
+app.get("/match", async (req, res) => {
+  const match = await Match.findOne({
+    $or: [{ teamA: req.query.teamName }, { teamB: req.query.teamName }]
+  });
+
+  if (!match) {
+    return res.send("<h2>No match assigned yet</h2><a href='/'>Go Back</a>");
+  }
+
+  res.send(`
+<h2>Match Details</h2>
+<p><b>${match.teamA}</b> vs <b>${match.teamB}</b></p>
+<p>Date: ${match.matchDate}</p>
+<p>Time: ${match.matchTime}</p>
+<p>Room ID: ${match.roomId}</p>
+<p>Password: ${match.roomPassword}</p>
+<a href="/">Go Back</a>
+`);
+});
+
+/* =======================
+   ADMIN: CREATE MATCH
+======================= */
+app.post("/admin/create-match", async (req, res) => {
+  await Match.create(req.body);
+  res.json({ message: "Match Created" });
+});
+
+/* =======================
+   SERVER START
+======================= */
+app.listen(3000, () => {
+  console.log("Server running on http://localhost:3000");
+});
